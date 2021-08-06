@@ -1,0 +1,71 @@
+import java.sql.CallableStatement;
+import java.sql.SQLException;
+import java.util.Arrays;
+
+public class REC {
+	
+	private DataSource DBconn;
+	private TextIO textIO;
+	
+	public REC() {
+		try {
+			DBconn = DataSource.getInstance();
+		} 
+		catch (SQLException e) {
+			System.out.println("Error connecting to DB " + e);
+		}
+		textIO = new TextIO();
+	}
+	
+	public void run() throws SQLException {
+		String command = "";
+		while (!(command = textIO.prompt("Enter Command:")).equalsIgnoreCase("quit")) {
+			if (command.equalsIgnoreCase("help")) {
+				textIO.display("help - display list of commands\n"
+						+ "quit - close program\n"
+						+ "rpt - get report, usage: \n"
+						+ "\t\"rpt listing (price low) (price high)\" - get range of listings by price\n"
+						+ "\t\"rpt summary\" - get summary of active listings\n"
+						+ "\"trade (OfferID1) (OfferID2)\" - Trade houses by offer ID's\n"
+						+ "test - run simple query for debugging");
+			}
+			else if (command.startsWith("rpt")) {
+				String[] rptArgs = command.split(" ");
+				if (rptArgs.length == 2 && rptArgs[1].equals("listing")) {
+					String query = String.format("SELECT name, NDC, FormType, FormFactor" 
+							+ "FROM Medication ");
+					String[][] result = DBconn.executeQuery(query);
+					textIO.display(textIO.formatReport(textIO.calculateColumnWidths(result), result, 4));
+				}
+				else if (rptArgs.length == 2 && rptArgs[1].equals("summary")) {
+					String query = "SELECT State, COUNT(*) as Count, MIN(Price) as Low, MAX(Price) as High, AVG(Price) as Average "
+							+ "FROM Active_Properties "
+							+ "GROUP BY State ";
+					MedicationDAO DAO = DBconn.getSummary(query);
+					String[][] result = new String[DAO.getRowCount()+2][5];
+					result[0] = DAO.getFirstRow();
+					int i = 1;
+					for (int r = 0; r < DAO.getRowCount(); r++) {
+						result[i] = DAO.getRow(r);
+						i++;
+					}			
+					textIO.display(textIO.formatReport(textIO.calculateColumnWidths(result), result, 4));
+				}
+				else {
+					textIO.display("Invalid arguments for command rpt, use command \"help\" for usages.");
+				}				
+			}
+			else if (command.equals("test")) {
+				String query = "select lname, fname from employees_ex order by lname, fname";
+				String[][] result = DBconn.executeQuery(query);
+				textIO.display(textIO.formatReport(textIO.calculateColumnWidths(result), result, 4));
+			}
+			else {
+				System.out.println("Invalid command, type \"help\" for command list.");
+			}
+		}
+		DBconn.close();
+	}
+}
+
+

@@ -1,0 +1,80 @@
+import java.util.ArrayList;
+
+public class SummaryDAO {
+	
+	private ArrayList<String> headers;
+	private ArrayList<String> states;
+	private ArrayList<Integer> counts;
+	private ArrayList<Integer> mins;
+	private ArrayList<Integer> maxes;
+	private ArrayList<Integer> avgs;
+	
+	public SummaryDAO(ArrayList<String> headers, ArrayList<String> states, ArrayList<Integer> counts, ArrayList<Integer> mins, ArrayList<Integer> maxes, ArrayList<Integer> avgs) {
+		this.headers = headers;
+		this.states = states;
+		this.counts = counts;
+		this.mins = mins;
+		this.maxes = maxes;
+		this.avgs = avgs;
+	}
+	
+	public int getRowCount() {
+		return states.size();
+	}
+	
+	public String[] getRow(int i) {
+		String[] row = new String[5];
+		row[0] = states.get(i);
+		row[1] = counts.get(i).toString();
+		row[2] = mins.get(i).toString();
+		row[3] = maxes.get(i).toString();
+		row[4] = avgs.get(i).toString();
+		return row;
+	}
+	
+	public String[] getFirstRow() {
+		String[] columns = new String[5];
+		for (int i = 0; i < 5; i++) {
+			columns[i] = headers.get(i);
+		}
+		return columns;
+	}
+	
+	public String[] getLastRow() {
+		String[] last = new String[5];
+		last[0] = "";
+		last[1] = getTotalCount().toString();
+		last[2] = getTotalMin().toString();
+		last[3] = getTotalMax().toString();
+		last[4] = "";
+		return last;
+	}
+	
+	private Integer getTotalCount() {
+		int total = 0;
+		for (int count: counts) {
+			total += count;
+		}
+		return total;
+	}
+	
+	private Integer getTotalMax() {
+		int max = Integer.MIN_VALUE;
+		for (int price: maxes) {
+			if (price > max) {
+				max = price;
+			}
+		}
+		return max;
+	}
+	
+	private Integer getTotalMin() {
+		int min = Integer.MAX_VALUE;
+		for (int price: mins) {
+			if (price < min) {
+				min = price;
+			}
+		}
+		return min;
+	}
+}

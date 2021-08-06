@@ -1,0 +1,131 @@
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+
+public class DataSource {
+	
+	private static DataSource obj;
+	private Connection conn;
+	
+	private DataSource() throws SQLException {
+		DriverManager.registerDriver (new oracle.jdbc.driver.OracleDriver());
+
+	    String user, pass;
+	    user = "thuffman14";
+	    pass = "Skater81215";
+	    try {
+	        conn = DriverManager.getConnection("jdbc:oracle:thin:@Worf.radford.edu:1521:itec3", user, pass);	        
+	    }
+	    catch (SQLException e){
+	    	System.out.println ("Could not load the db" + e);
+	    }
+	};
+
+	public static DataSource getInstance() throws SQLException {
+		if (obj == null) {
+			obj = new DataSource();
+		}
+		return obj;
+	}
+	
+	public MedicationDAO getSummary(String query) {
+		ArrayList<String> headers = new ArrayList<>();
+		ArrayList<String> states = new ArrayList<>();
+		ArrayList<Integer> counts = new ArrayList<>();
+		ArrayList<Integer> mins = new ArrayList<>();
+		ArrayList<Integer> maxes = new ArrayList<>();
+		ArrayList<Integer> avgs = new ArrayList<>();
+		try {
+			Statement stmt = conn.createStatement(); 
+	        ResultSet rset = stmt.executeQuery(query);
+	        ResultSetMetaData tableData = rset.getMetaData();
+	        int columns = tableData.getColumnCount();
+	        
+	        for (int i = 1; i <= columns; i++) {
+	        	headers.add(tableData.getColumnLabel(i));
+	        }
+	        
+	        while (rset.next()) { 
+	            states.add(rset.getString("State"));
+	            counts.add(rset.getInt("Count"));
+	            mins.add(rset.getInt("Low"));
+	            maxes.add(rset.getInt("High"));
+	            avgs.add(rset.getInt("Average"));
+	        }
+		}
+		catch (SQLException e) {
+			System.out.println("Error querying the db " + e);
+		}
+
+		return new MedicationDAO(headers, states, counts, mins, maxes, avgs);
+	}
+	
+	public void makeTrade(String offID1, String offID2) throws SQLException {
+		try {
+			conn.setAutoCommit(false);
+			CallableStatement cStmt = conn.prepareCall("{call purchase(?)}");
+	        cStmt.setInt(1, Integer.parseInt(offID1));
+	        cStmt.execute();
+	        
+	        cStmt.setInt(1, Integer.parseInt(offID2));
+	        cStmt.execute();
+	        System.out.println("Trade performed successfully.");
+	        conn.commit();
+		}
+		catch (SQLException e) {
+			System.out.println("Error making trade " + e);
+			conn.rollback();
+		}
+		finally {
+			conn.setAutoCommit(true);
+		}
+	}
+	
+	public String[][] executeQuery(String query) {
+		String[][] results = null;
+		
+		try {
+			Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY); 
+	        ResultSet rset = stmt.executeQuery(query);
+	        
+	        rset.last();
+	        int rows = rset.getRow();
+	        rset.beforeFirst();
+	        
+	        ResultSetMetaData tableData = rset.getMetaData();
+	        int columns = tableData.getColumnCount();
+	        results = new String[rows+1][columns];
+	        
+	        for (int i = 1; i <= columns; i++) {
+	        	results[0][i-1] = tableData.getColumnLabel(i);
+	        }
+	        int r = 1;
+	        while (rset.next()) {
+	        	for (int c = 1; c <= columns; c++) {
+	        		results[r][c-1] = rset.getString(c);
+	        	}
+	        	r++;
+	        }
+		} 
+		catch (SQLException e) {
+			System.out.println("Error querying the db " + e);
+		}
+		
+        return results;
+	}
+	
+	public void close() {
+		try {
+			conn.close();
+		}
+		catch (SQLException e) {
+			System.out.println("Error closing connection" + e);
+		}
+	}
+}
